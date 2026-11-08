@@ -89,25 +89,43 @@ class SpotifyClient:
         return items[0]["uri"] if items else None
 
     def search_tracks_bulk(self, songs: list[dict]) -> list[str]:
-        """Search Spotify for each song. Returns list of URIs (None-filtered)."""
-        uris = []
-        for i, s in enumerate(songs):
+        """Search Spotify for each song. Returns list of URIs (None-filtered).
+
+        Results are cached in Supabase so each (artist, song) is only searched once.
+        """
+        from db import get_cached_uris, save_cached_uris
+
+        cached = get_cached_uris(songs)
+        to_search = [s for s in songs if (s["artist"], s["song"]) not in cached]
+
+        if to_search:
+            print(f"    searching {len(to_search)} new tracks ({len(cached)} cached)...")
+
+        new_cache: dict[tuple, str | None] = {}
+        for i, s in enumerate(to_search):
+            key = (s["artist"], s["song"])
+            uri = None
             for attempt in range(4):
                 try:
                     uri = self.search_track(s["artist"], s["song"])
-                    if uri:
-                        uris.append(uri)
                     break
                 except requests.HTTPError as e:
                     if e.response.status_code == 429:
                         retry_after = int(e.response.headers.get("Retry-After", 5))
+                        print(f"    rate limited, waiting {retry_after}s...")
                         time.sleep(retry_after + 1)
                     else:
                         raise
+            new_cache[key] = uri
             time.sleep(0.2)
-            if i > 0 and i % 50 == 0:
-                print(f"    searched {i}/{len(songs)} tracks...")
-        return uris
+            if (i + 1) % 50 == 0:
+                print(f"    {i + 1}/{len(to_search)} searched...")
+
+        if new_cache:
+            save_cached_uris(new_cache)
+
+        all_cache = {**cached, **new_cache}
+        return [all_cache[s["artist"], s["song"]] for s in songs if all_cache.get((s["artist"], s["song"]))]
 
     # ------------------------------------------------------------------
     # Playlists

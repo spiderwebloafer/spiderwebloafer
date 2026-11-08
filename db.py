@@ -170,3 +170,28 @@ def get_spotify_playlist_id(playlist_id: int) -> str | None:
     db = get_client()
     rows = db.table("playlists").select("spotify_playlist_id").eq("id", playlist_id).execute().data
     return rows[0]["spotify_playlist_id"] if rows else None
+
+
+# ---------------------------------------------------------------------------
+# Track URI cache
+# ---------------------------------------------------------------------------
+
+def get_cached_uris(songs: list[dict]) -> dict[tuple, str | None]:
+    """Return {(artist, song): uri} for songs already in the cache (uri may be None = known miss)."""
+    if not songs:
+        return {}
+    db = get_client()
+    pairs = [(s["artist"], s["song"]) for s in songs]
+    # Fetch all at once using or_ filter
+    result = db.table("track_uri_cache").select("artist,song,uri").execute()
+    cached = {(r["artist"], r["song"]): r["uri"] for r in result.data}
+    return {pair: cached[pair] for pair in pairs if pair in cached}
+
+
+def save_cached_uris(uri_map: dict[tuple, str | None]):
+    """Upsert (artist, song) -> uri into the cache. uri=None means no match found."""
+    if not uri_map:
+        return
+    db = get_client()
+    rows = [{"artist": a, "song": s, "uri": uri} for (a, s), uri in uri_map.items()]
+    db.table("track_uri_cache").upsert(rows, on_conflict="artist,song").execute()
