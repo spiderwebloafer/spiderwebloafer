@@ -50,6 +50,15 @@ def run():
     print(f"\n  {auth_url}\n")
     webbrowser.open(auth_url)
 
+    supabase_edge = "supabase.co/functions"
+    if supabase_edge in redirect_uri:
+        print("After you approve, Spotify will redirect to the Supabase edge function.")
+        print("That page will display your refresh token — copy it from there.\n")
+        print("Once you have it, add it to 1Password as 'spotify_refresh_token'.")
+        print("Then update .env.op and you're done.\n")
+        input("Press Enter once you've copied the token from the browser...")
+        return
+
     print("After you approve, your browser will fail to load a page.")
     print("That's expected. Copy the FULL URL from your address bar and paste it below.\n")
     redirected_url = input("Paste the full redirect URL here: ").strip()
