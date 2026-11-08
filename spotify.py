@@ -117,6 +117,10 @@ class SpotifyClient:
                     else:
                         raise
             new_cache[key] = uri
+            # Save every 25 songs so progress isn't lost if interrupted
+            if len(new_cache) % 25 == 0:
+                save_cached_uris(new_cache)
+                new_cache = {}
             time.sleep(0.2)
             if (i + 1) % 50 == 0:
                 print(f"    {i + 1}/{len(to_search)} searched...")
