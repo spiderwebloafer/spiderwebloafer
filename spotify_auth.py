@@ -30,7 +30,10 @@ SCOPES = "playlist-modify-public playlist-modify-private playlist-read-private"
 def run():
     client_id = os.environ["SPOTIFY_CLIENT_ID"]
     client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
-    redirect_uri = os.environ.get("SPOTIFY_REDIRECT_URI", "http://localhost")
+    redirect_uri = os.environ.get(
+      "SPOTIFY_REDIRECT_URI",
+      "https://oxmqxibmwsskhyxolnwc.supabase.co/functions/v1/spotify-callback",
+  )
 
     auth_url = (
         "https://accounts.spotify.com/authorize?"
