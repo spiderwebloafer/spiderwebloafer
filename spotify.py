@@ -91,11 +91,22 @@ class SpotifyClient:
     def search_tracks_bulk(self, songs: list[dict]) -> list[str]:
         """Search Spotify for each song. Returns list of URIs (None-filtered)."""
         uris = []
-        for s in songs:
-            uri = self.search_track(s["artist"], s["song"])
-            if uri:
-                uris.append(uri)
-            time.sleep(0.05)  # stay well under rate limit
+        for i, s in enumerate(songs):
+            for attempt in range(4):
+                try:
+                    uri = self.search_track(s["artist"], s["song"])
+                    if uri:
+                        uris.append(uri)
+                    break
+                except requests.HTTPError as e:
+                    if e.response.status_code == 429:
+                        retry_after = int(e.response.headers.get("Retry-After", 5))
+                        time.sleep(retry_after + 1)
+                    else:
+                        raise
+            time.sleep(0.2)
+            if i > 0 and i % 50 == 0:
+                print(f"    searched {i}/{len(songs)} tracks...")
         return uris
 
     # ------------------------------------------------------------------
