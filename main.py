@@ -2,13 +2,15 @@
 WxpnSongTracker — daily runner.
 
 Usage:
-  python main.py                  # Scrape yesterday + today, update playlists
-  python main.py --date 2026-11-01            # Scrape one specific date
-  python main.py --backfill 2026-01-01        # Backfill from a past date to today
-  python main.py --playlists-only             # Rebuild playlists without scraping
+  python main.py                       # Scrape yesterday + today, update playlists
+  python main.py --date 2026-11-01     # Scrape one specific date
+  python main.py --backfill 2026-01-01 # Backfill from a past date to today
+  python main.py --playlists-only      # Rebuild playlists without scraping
+  python main.py --no-spotify          # Skip Spotify sync
 """
 
 import argparse
+import os
 from datetime import date, timedelta
 
 from show_schedule import fetch_schedule
@@ -37,11 +39,21 @@ def run_daily(schedule: list[dict], show_id_map: dict):
             print(f"  ERROR: {exc}")
 
 
-def run_playlists():
+def run_playlists(spotify_client=None):
     print("Building monthly playlists...")
-    build_monthly_playlists()
+    build_monthly_playlists(spotify_client=spotify_client)
     print("Building show yearly playlists...")
-    build_show_yearly_playlists()
+    build_show_yearly_playlists(spotify_client=spotify_client)
+
+
+def _get_spotify_client():
+    if not os.environ.get("SPOTIFY_CLIENT_ID"):
+        return None
+    if not os.environ.get("SPOTIFY_REFRESH_TOKEN"):
+        print("  Spotify: SPOTIFY_REFRESH_TOKEN not set — run spotify_auth.py first")
+        return None
+    from spotify import SpotifyClient
+    return SpotifyClient()
 
 
 def main():
@@ -50,6 +62,7 @@ def main():
     parser.add_argument("--backfill", help="Backfill from this date to today (YYYY-MM-DD)")
     parser.add_argument("--playlists-only", action="store_true", help="Only rebuild playlists")
     parser.add_argument("--skip-playlists", action="store_true", help="Skip playlist rebuild")
+    parser.add_argument("--no-spotify", action="store_true", help="Skip Spotify sync")
     args = parser.parse_args()
 
     print("Fetching WXPN show schedule...")
@@ -73,7 +86,10 @@ def main():
             run_daily(schedule, show_id_map)
 
     if not args.skip_playlists:
-        run_playlists()
+        spotify = None if args.no_spotify else _get_spotify_client()
+        if spotify:
+            print("Spotify client ready.")
+        run_playlists(spotify_client=spotify)
 
     print("Done.")
 

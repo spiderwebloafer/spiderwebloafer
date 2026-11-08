@@ -154,7 +154,19 @@ def sync_playlist_songs(playlist_id: int, songs: list[dict]):
                 "song": s["song"],
                 "album": s.get("album"),
                 "first_played_at": s["first_played_at"],
+                "spotify_track_uri": s.get("spotify_track_uri"),
             }
             for s in songs
         ]
         db.table("playlist_songs").insert(rows).execute()
+
+
+def save_spotify_playlist_id(playlist_id: int, spotify_playlist_id: str):
+    db = get_client()
+    db.table("playlists").update({"spotify_playlist_id": spotify_playlist_id}).eq("id", playlist_id).execute()
+
+
+def get_spotify_playlist_id(playlist_id: int) -> str | None:
+    db = get_client()
+    rows = db.table("playlists").select("spotify_playlist_id").eq("id", playlist_id).execute().data
+    return rows[0]["spotify_playlist_id"] if rows else None
