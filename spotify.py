@@ -155,14 +155,14 @@ class SpotifyClient:
     def replace_playlist_tracks(self, playlist_id: str, uris: list[str]):
         """Replace all tracks in a playlist (handles Spotify's 100-URI limit)."""
         if not uris:
-            self._put(f"playlists/{playlist_id}/tracks", {"uris": []})
+            self._put(f"playlists/{playlist_id}/items", {"uris": []})
             return
 
         # First chunk replaces, subsequent chunks append
         chunks = [uris[i:i + 100] for i in range(0, len(uris), 100)]
-        self._put(f"playlists/{playlist_id}/tracks", {"uris": chunks[0]})
+        self._put(f"playlists/{playlist_id}/items", {"uris": chunks[0]})
         for chunk in chunks[1:]:
-            self._post(f"playlists/{playlist_id}/tracks", {"uris": chunk})
+            self._post(f"playlists/{playlist_id}/items", {"uris": chunk})
 
     # ------------------------------------------------------------------
     # High-level sync
