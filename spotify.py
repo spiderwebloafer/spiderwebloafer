@@ -63,6 +63,8 @@ class SpotifyClient:
 
     def _put(self, path: str, json: dict):
         resp = requests.put(f"{SPOTIFY_API}/{path}", headers=self._headers(), json=json, timeout=15)
+        if not resp.ok:
+            print(f"    PUT {path} -> {resp.status_code}: {resp.text}")
         resp.raise_for_status()
 
     # ------------------------------------------------------------------
