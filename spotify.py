@@ -103,7 +103,8 @@ class SpotifyClient:
         if to_search:
             print(f"    searching {len(to_search)} new tracks ({len(cached)} cached)...")
 
-        new_cache: dict[tuple, str | None] = {}
+        all_new: dict[tuple, str | None] = {}
+        flush_buf: dict[tuple, str | None] = {}
         for i, s in enumerate(to_search):
             key = (s["artist"], s["song"])
             uri = None
@@ -118,19 +119,20 @@ class SpotifyClient:
                         time.sleep(retry_after + 1)
                     else:
                         raise
-            new_cache[key] = uri
-            # Save every 25 songs so progress isn't lost if interrupted
-            if len(new_cache) % 25 == 0:
-                save_cached_uris(new_cache)
-                new_cache = {}
+            all_new[key] = uri
+            flush_buf[key] = uri
+            # Flush to DB every 25 songs so progress isn't lost if interrupted
+            if len(flush_buf) >= 25:
+                save_cached_uris(flush_buf)
+                flush_buf = {}
             time.sleep(0.2)
             if (i + 1) % 50 == 0:
                 print(f"    {i + 1}/{len(to_search)} searched...")
 
-        if new_cache:
-            save_cached_uris(new_cache)
+        if flush_buf:
+            save_cached_uris(flush_buf)
 
-        all_cache = {**cached, **new_cache}
+        all_cache = {**cached, **all_new}
         return [all_cache[s["artist"], s["song"]] for s in songs if all_cache.get((s["artist"], s["song"]))]
 
     # ------------------------------------------------------------------
